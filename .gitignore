@@ -1,0 +1,7 @@
+*.img
+*.o
+*.map
+*.sym
+bootsect
+kernel
+color
