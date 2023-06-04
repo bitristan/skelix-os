@@ -42,3 +42,5 @@ make run_debug
 - 01: bootstrap
 
 - 02: protected mode
+
+- 04: interrupts
