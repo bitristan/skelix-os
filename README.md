@@ -44,3 +44,5 @@ make run_debug
 - 02: protected mode
 
 - 04: interrupts
+
+- 05-1: timer interrupt
