@@ -46,3 +46,5 @@ make run_debug
 - 04: interrupts
 
 - 05-1: timer interrupt
+
+- 05-2: keyboard interrupt
