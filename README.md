@@ -40,3 +40,5 @@ make run_debug
 ## tutorial
 
 - 01: bootstrap
+
+- 02: protected mode
