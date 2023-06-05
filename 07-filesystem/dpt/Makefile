@@ -1,50 +1,65 @@
-AS=as -Iinclude
-LD=ld
-CC=gcc
-CPP=gcc -E -nostdinc -Iinclude
-CFLAGS=-Wall -pedantic -W -nostdlib -nostdinc -Wno-long-long -I include -fomit-frame-pointer
+UNAME := $(shell uname)
 
+ifeq ($(UNAME), Linux)
+	AS=as --32
+	LD=ld -m elf_i386
+	CC=gcc -m32
+endif
+
+ifeq ($(UNAME), Darwin)
+	AS=i686-elf-as
+	LD=i686-elf-ld
+	CC=i686-elf-gcc
+	BOCHS_FLAG='display_library: sdl2'
+endif
+
+GDB=gdb
+CFLAGS=-g -fno-builtin -fno-pic
+
+QEMU=qemu-system-i386
+BOCHS=bochs
+IMG=final.img
+
+.PHONY=clean run all
+
+BOOT_OBJS=bootsect.o
+KERNEL_SYM=kernel.sym
 KERNEL_OBJS= load.o init.o isr.o timer.o libcc.o scr.o kb.o task.o kprintf.o hd.o exceptions.o 
 
-#.c.s:
-#	${CC} ${CFLAGS} -S -o $*.s $<
-
 .s.o:
-	${AS} -a $< -o $*.o >$*.map
+	$(AS) $< -Iinclude -o $*.o
 
-all: final.img
+.c.o:
+	$(CC) $(CFLAGS) -c $< -Iinclude -o $*.o
 
-final.img: bootsect kernel
-	cat bootsect kernel > final.img
-	@wc -c final.img
+all: $(IMG)
 
-bootsect: bootsect.o
-	${LD} --oformat binary -N -e start -Ttext 0x7c00 -o bootsect $<
+$(IMG): bootsect kernel
+	dd if=/dev/zero of=$@ bs=1024 count=1440
+	dd if=$(word 1, $^) of=$@ bs=512 count=1 conv=notrunc
+	dd if=$(word 2, $^) of=$@ bs=512 seek=1 conv=notrunc
 
-kernel: ${KERNEL_OBJS}
-	${LD} --oformat binary -N -e pm_mode -Ttext 0x0000 -o $@ ${KERNEL_OBJS}
-	@wc -c kernel
+bootsect: $(BOOT_OBJS)
+	$(LD) --oformat binary -e start -Ttext 0x7c00 -o $@ $^
+
+kernel: $(KERNEL_OBJS)
+	$(LD) --oformat binary -N -e pm_mode -Ttext 0x0000 -o $@ $^
+
+$(KERNEL_SYM): $(KERNEL_OBJS)
+	$(LD) -N -e pm_mode -Ttext 0x0000 -o $@ $(KERNEL_OBJS)
+
+run: $(IMG)
+	$(QEMU) -boot a -drive file=$<,format=raw,index=0,if=floppy
+
+run_bochs: $(IMG)
+	$(BOCHS) -qf /dev/null \
+		'floppya: 1_44=$<, status=inserted' \
+		'boot: floppy' \
+		$(BOCHS_FLAG)
+
+run_debug: $(IMG) $(KERNEL_SYM)
+	$(QEMU) -s -S -boot a -drive file=$<,format=raw,index=0,if=floppy &
+	$(GDB) -q -x gdb.gdb -ex "symbol-file $(KERNEL_SYM)"
 
 clean:
-	rm -f *.img *.map kernel bootsect *.o
-
-dep:
-	sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	(for i in *.c;do ${CPP} -M $$i;done) >> tmp_make
-	mv tmp_make Makefile
-
-### Dependencies:
-exceptions.o: exceptions.c include/kprintf.h include/scr.h include/asm.h \
-  include/task.h include/kernel.h
-hd.o: hd.c include/hd.h include/asm.h include/kprintf.h include/scr.h \
-  include/kernel.h
-init.o: init.c include/scr.h include/isr.h include/asm.h include/kernel.h \
-  include/task.h include/libcc.h include/timer.h include/hd.h \
-  include/kprintf.h include/kb.h
-kb.o: kb.c include/asm.h include/scr.h
-kprintf.o: kprintf.c include/scr.h include/asm.h include/kprintf.h
-libcc.o: libcc.c include/libcc.h
-scr.o: scr.c include/asm.h include/scr.h include/libcc.h
-task.o: task.c include/task.h include/kernel.h include/asm.h
-timer.o: timer.c include/asm.h include/task.h include/kernel.h \
-  include/scr.h include/kprintf.h
+	@rm -f bootsect kernel $(BOOT_OBJS) $(KERNEL_OBJS) $(KERNEL_SYM) $(IMG)
