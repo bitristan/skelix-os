@@ -50,3 +50,8 @@ make run_debug
 - 05-2: keyboard interrupt
 
 - 06: muti-tasking
+
+- 07-1: filesystem: dpt
+
+In the demo, we create empty hard disk. Then the kernel will create a dpt for the hd automatically. You can also use fdisk tool to create dpt manually, then the kernel can read dpt info.
+
