@@ -51,7 +51,8 @@ make run_debug
 
 - 06: muti-tasking
 
-- 07-1: filesystem: dpt
+- 07-1: filesystem: dpt create and read
 
 In the demo, we create empty hard disk. Then the kernel will create a dpt for the hd automatically. You can also use fdisk tool to create dpt manually, then the kernel can read dpt info.
 
+- 07-2: filesystem: fs create and read
