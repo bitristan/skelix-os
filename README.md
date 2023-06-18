@@ -56,3 +56,5 @@ make run_debug
 In the demo, we create empty hard disk. Then the kernel will create a dpt for the hd automatically. You can also use fdisk tool to create dpt manually, then the kernel can read dpt info.
 
 - 07-2: filesystem: fs create and read
+
+- 07-3: filesystem: set up root directory
